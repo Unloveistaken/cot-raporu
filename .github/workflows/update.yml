@@ -1,0 +1,42 @@
+name: COT Raporu Güncelle
+
+on:
+  schedule:
+    # Her Cuma 19:00 Türkiye saati (16:00 UTC)
+    # CFTC raporu Cuma 15:30 ET = 22:30 TR yayımlar
+    # Biz 19:00'da çekiyoruz — önceki haftanın en güncel verisi gelir
+    # Yeni rapor geldikten sonra çekmek için Cumartesi 01:00 TR = Cuma 22:00 UTC
+    - cron: '0 22 * * 5'
+
+  # GitHub'da elle tetiklemek için (Actions → Run workflow)
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write   # Dosya commit edebilmek için
+
+    steps:
+      - name: Kodu indir
+        uses: actions/checkout@v4
+
+      - name: Python kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Bağımlılıkları yükle
+        run: pip install requests numpy scikit-learn
+
+      - name: COT raporunu üret
+        run: python generate_cot_report.py
+
+      - name: Değişiklikleri kaydet
+        run: |
+          git config user.name  "COT Bot"
+          git config user.email "cot-bot@users.noreply.github.com"
+          git add COT_Raporu.html update_log.txt
+          git diff --staged --quiet || git commit -m "COT güncelleme: $(date +'%Y-%m-%d')"
+          git push
